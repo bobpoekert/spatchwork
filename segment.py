@@ -58,8 +58,6 @@ class Segmentation(object):
             print float(done) / count * 100
             done += 1
             mask = self.segment_mask(segment_id)
-            masked = self.raw_img[mask]
-            masked.fill(np.mean(masked))
 
             vector = feature_vector(masked)
 
