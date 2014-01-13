@@ -65,8 +65,6 @@ class Segmentation(object):
             idx = np.argmin(distances)
             fname = fnames[idx]
             texture = self.load_image(fname, mask.shape)
-            #texture = np.resize(raw_tex, (mask.shape[0], mask.shape[1], raw_tex.shape[2]))
-            #texture = transform.resize(raw_tex, (mask.shape[0], mask.shape[1], raw_tex.shape[2]))
             self.raw_img[mask] = texture[mask]
 
     def show(self):
@@ -76,7 +74,7 @@ class Segmentation(object):
         io.imsave(fname, self.raw_img)
 
 def feature_vector(image):
-    vec, edges = np.histogram(image, bins=1024)
+    vec, edges = np.histogram(image, bins=32)
     return vec
 
 def vectors_from_images(fnames):
