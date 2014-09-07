@@ -7,8 +7,7 @@ from skimage.util import img_as_float
 from glob import glob
 from functools import partial
 import json, time, random
-
-io.use_plugin('pil')
+from PIL import Image
 
 norm_cache = {}
 def norms(mat):
@@ -19,32 +18,25 @@ def norms(mat):
         norm_cache[id(mat)] = res
         return res
 
+def load_image(fname):
+    return Image.open(fname).convert('RGB')
+
 class Segmentation(object):
 
     def __init__(self, fname):
         self.fname = fname
-        self.image_cache = {}
 
         print 'loading image'
-        self.raw_img = io.imread(fname)
+        img = Image.open(fname)
+        img.thumbnail((800, 600), Image.ANTIALIAS)
+        self.raw_img = np.array(img.convert('RGB'))
         self._segment_ids = None
         img_float = img_as_float(self.raw_img)
         print 'segmenting image'
         self.segments = felzenszwalb(img_float, scale=300, sigma=0.5, min_size=100)
 
     def load_image(self, fname, shape):
-        key = (fname, shape)
-        if key in self.image_cache:
-            return self.image_cache[key]
-        texture = io.imread(fname)
-        #texture = transform.resize(texture, (shape[0], shape[1], texture.shape[2]))
-        texture = np.resize(texture, (shape[0], shape[1], texture.shape[2]))
-        #texture.resize((shape[0], shape[1], texture.shape[2]))
-        ks = self.image_cache.keys()
-        if len(ks) > 100:
-            del self.image_cache[ks[0]]
-        self.image_cache[key] = texture
-        return texture
+        return np.array(load_image(fname).resize((shape[1], shape[0])))
 
     def segment_mask(self, segment_id):
         mask = np.empty(self.segments.shape)
@@ -70,9 +62,6 @@ class Segmentation(object):
             mask = self.segment_mask(segment_id)
             vector = feature_vector(self.raw_img[np.nonzero(mask)])
 
-            #distances = np.sqrt(np.sum((vectors - vector)**2, axis=1)) # euclidian
-            #distances = np.apply_along_axis(partial(distance.cosine, vector), axis=1, arr=vectors) # cosine
-
             # compute cosine similarity
             dots = np.einsum('ij,ij->i', vectors, np.resize(vector, vectors.shape))
             v_norm = np.resize(distance.norm(vector), vectors.shape[0])
@@ -82,11 +71,8 @@ class Segmentation(object):
 
             idx = np.argmax(similarities)
             fname = fnames[idx]
-            texture = self.load_image(fname, mask.shape)
+            texture = self.load_image(fname, self.raw_img.shape)
             self.raw_img[mask] = texture[mask]
-
-    def show(self):
-        io.imshow(self.raw_img)
 
     def save(self, fname):
         io.imsave(fname, self.raw_img)
@@ -100,7 +86,7 @@ def vectors_from_images(fnames):
     vectors = []
     for fname in fnames:
         print fname
-        img = io.imread(fname)
+        img = load_image(fname)
         vec = feature_vector(img)
         vectors.append(vec)
     return np.array(vectors)
