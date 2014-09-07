@@ -5,9 +5,19 @@ import scipy.spatial.distance as distance
 from skimage.segmentation import felzenszwalb
 from skimage.util import img_as_float
 from glob import glob
-import json, time
+from functools import partial
+import json, time, random
 
 io.use_plugin('pil')
+
+norm_cache = {}
+def norms(mat):
+    try:
+        return norm_cache[id(mat)]
+    except KeyError:
+        res = np.apply_along_axis(distance.norm, axis=1, arr=mat)
+        norm_cache[id(mat)] = res
+        return res
 
 class Segmentation(object):
 
@@ -58,11 +68,19 @@ class Segmentation(object):
             print float(done) / count * 100
             done += 1
             mask = self.segment_mask(segment_id)
+            vector = feature_vector(self.raw_img[np.nonzero(mask)])
 
-            vector = feature_vector(masked)
+            #distances = np.sqrt(np.sum((vectors - vector)**2, axis=1)) # euclidian
+            #distances = np.apply_along_axis(partial(distance.cosine, vector), axis=1, arr=vectors) # cosine
 
-            distances = np.sqrt(np.sum((vectors - vector)**2, axis=1))
-            idx = np.argmin(distances)
+            # compute cosine similarity
+            dots = np.einsum('ij,ij->i', vectors, np.resize(vector, vectors.shape))
+            v_norm = np.resize(distance.norm(vector), vectors.shape[0])
+            m_norm = norms(vectors)
+            scales = v_norm * m_norm
+            similarities = dots / scales
+
+            idx = np.argmax(similarities)
             fname = fnames[idx]
             texture = self.load_image(fname, mask.shape)
             self.raw_img[mask] = texture[mask]
@@ -74,8 +92,9 @@ class Segmentation(object):
         io.imsave(fname, self.raw_img)
 
 def feature_vector(image):
-    vec, edges = np.histogram(image, bins=32)
-    return vec
+    hist, edges = np.histogram(image, bins=256)
+    #total = np.sum(hist)
+    return hist
 
 def vectors_from_images(fnames):
     vectors = []
@@ -107,7 +126,11 @@ if __name__ == '__main__':
     #build_dataset('images')
     print 'loading corpus'
     fnames, vectors = load_vectors('images')
-    seg = Segmentation(sys.argv[1])
-    print 'applying textures'
-    seg.apply_textures(vectors, fnames)
-    seg.show()
+    for target in glob('targets/*'):
+        if target.endswith('_processed.png'):
+            continue
+        print target
+        seg = Segmentation(target)
+        print 'applying textures'
+        seg.apply_textures(vectors, fnames)
+        seg.save('%s_processed.png' % target.split('.')[0])
