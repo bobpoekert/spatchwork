@@ -3,8 +3,9 @@ spatchwork
 
 usage:
 
-1. run: `python segment.py <some image file>`
-2. magic
+1. put the image file(s) in a drectory called targets/
+2. run `python segment.py`
+3. your output will be in targets, and have a "_processed.png" suffix
 
 examples:
 
