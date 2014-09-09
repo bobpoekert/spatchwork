@@ -68,14 +68,17 @@ class Segmentation(object):
             m_norm = norms(vectors)
             scales = v_norm * m_norm
             similarities = dots / scales
-
             idx = np.argmax(similarities)
+
             fname = fnames[idx]
             texture = self.load_image(fname, self.raw_img.shape)
             self.raw_img[mask] = texture[mask]
 
     def save(self, fname):
         io.imsave(fname, self.raw_img)
+
+    def to_pil(self):
+        return Image.fromarray(self.raw_img)
 
 def feature_vector(image):
     hist, edges = np.histogram(image, bins=256)
