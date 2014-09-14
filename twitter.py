@@ -9,8 +9,9 @@ auth = tweepy.OAuthHandler(keys.twitter.api_key, keys.twitter.api_secret)
 auth.set_access_token(keys.twitter.access_token, keys.twitter.access_secret)
 twitter = tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
 
-def get_mentions(poll_interval=120, direct_mentions_only=True, last_mention=None):
-    screen_name = twitter.me().screen_name
+def get_mentions(poll_interval=60, direct_mentions_only=True, last_mention=None):
+    #screen_name = twitter.me().screen_name
+    screen_name = 'a_quilt_bot'
     print screen_name
     last_checked = 0
     print last_mention
@@ -25,9 +26,10 @@ def get_mentions(poll_interval=120, direct_mentions_only=True, last_mention=None
         if direct_mentions_only:
             current_mentions = [t for t in current_mentions if \
                     re.split('[^@\w]', t.text)[0] == '@' + screen_name]
-        last_mention = current_mentions[0].id
-        for mention in current_mentions:
-            yield mention
+        if current_mentions: 
+            last_mention = current_mentions[0].id
+            for mention in current_mentions:
+                yield mention
         time.sleep(poll_interval)
 
 db = sqlite3.connect('twitter.sqlite')
@@ -74,14 +76,14 @@ def record_tweet_processed(mention_id=None, reply_id=None):
 
 def last_mention_id():
     c = db.cursor()
-    c.execute('select mention_id from mentions order by finished_on desc limit 1')
+    c.execute('select mention_id from mentions where processed = 1 order by finished_on desc limit 1')
     res = c.fetchone()
     c.close()
     if res:
         return res[0]
 
 def get_images(tweet):
-    for media in tweet._json['entities']['media']:
+    for media in tweet._json.get('entities', []).get('media', []):
         print media
         if not media:
             continue
@@ -115,13 +117,17 @@ def process_mention(image_url, _id, sender):
         reply_id=res.id)
 
 if __name__ == '__main__':
-    for mention in get_mentions(last_mention=last_mention_id()):
+    for mention in get_mentions():
         try:
             mid = mention.id
+            print mid
             if was_processed(mid):
                 continue
             sender = mention.user.screen_name
-            image = next(get_images(mention))
+            try:
+                image = next(get_images(mention))
+            except:
+                continue
             process_mention(image, mid, sender)
         except:
             traceback.print_exc()
