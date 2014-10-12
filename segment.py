@@ -2,12 +2,18 @@ from skimage import io, color, transform
 import numpy as np
 import numpy.ma as ma
 import scipy.spatial.distance as distance
+from numpy import pi
+from math import cos,sqrt
 from skimage.segmentation import felzenszwalb
 from skimage.util import img_as_float
 from glob import glob
 from functools import partial
 import json, time, random
-from PIL import Image
+from PIL import Image, ImageEnhance
+
+def enhance(img):
+    res = ImageEnhance.Sharpness(img).enhance(5)
+    return res
 
 norm_cache = {}
 def norms(mat):
@@ -28,12 +34,12 @@ class Segmentation(object):
 
         print 'loading image'
         img = Image.open(fname)
-        img.thumbnail((800, 600), Image.ANTIALIAS)
-        self.raw_img = np.array(img.convert('RGB'))
+        img.thumbnail((800,600), Image.ANTIALIAS)
+        self.raw_img = np.array(enhance(img).convert('RGB'))
         self._segment_ids = None
         img_float = img_as_float(self.raw_img)
         print 'segmenting image'
-        self.segments = felzenszwalb(img_float, scale=300, sigma=0.5, min_size=100)
+        self.segments = felzenszwalb(img_float, scale=300, sigma=0.5, min_size=30)
 
     def load_image(self, fname, shape):
         return np.array(load_image(fname).resize((shape[1], shape[0])))
@@ -56,6 +62,7 @@ class Segmentation(object):
         ids = self.segment_ids()
         count = ids.shape[0]
         done = 0
+        picked_textures = np.ones(vectors.shape[0])
         for segment_id in ids:
             print float(done) / count * 100
             done += 1
@@ -67,8 +74,13 @@ class Segmentation(object):
             v_norm = np.resize(distance.norm(vector), vectors.shape[0])
             m_norm = norms(vectors)
             scales = v_norm * m_norm
-            similarities = dots / scales
+            cosine_similarities = dots / scales
+
+            similarities = cosine_similarities / picked_textures
+
             idx = np.argmax(similarities)
+            picked_textures[idx] += (picked_textures[idx] * 10)
+            #picked_textures[idx] += 1
 
             fname = fnames[idx]
             texture = self.load_image(fname, self.raw_img.shape)
