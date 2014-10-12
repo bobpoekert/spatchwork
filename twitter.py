@@ -9,7 +9,9 @@ auth = tweepy.OAuthHandler(keys.twitter.api_key, keys.twitter.api_secret)
 auth.set_access_token(keys.twitter.access_token, keys.twitter.access_secret)
 twitter = tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
 
-def get_mentions(poll_interval=60, direct_mentions_only=True, last_mention=None):
+blacklist = ['badpng']
+
+def get_mentions(poll_interval=60, direct_mentions_only=False, last_mention=None):
     #screen_name = twitter.me().screen_name
     screen_name = 'a_quilt_bot'
     print screen_name
@@ -29,8 +31,11 @@ def get_mentions(poll_interval=60, direct_mentions_only=True, last_mention=None)
         if current_mentions: 
             last_mention = current_mentions[0].id
             for mention in current_mentions:
+                if mention.user.screen_name in blacklist:
+                    continue
                 yield mention
-        time.sleep(poll_interval)
+        print 'sleeping'
+        time.sleep(poll_interval - (time.time() - last_checked))
 
 db = sqlite3.connect('twitter.sqlite')
 
@@ -111,7 +116,8 @@ def process_mention(image_url, _id, sender):
             'not-actually-a-file.jpeg', # this is kind of gross
             file=blob,
             in_reply_to_status_id=_id,
-            status=u'\u2766@%s ' % sender)
+            #status=u'\u2766@%s ' % sender)
+            status=u'@%s ' % sender)
     record_tweet_processed(
         mention_id=_id,
         reply_id=res.id)

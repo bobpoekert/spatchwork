@@ -33,7 +33,7 @@ class Segmentation(object):
         self._segment_ids = None
         img_float = img_as_float(self.raw_img)
         print 'segmenting image'
-        self.segments = felzenszwalb(img_float, scale=300, sigma=0.5, min_size=100)
+        self.segments = felzenszwalb(img_float, scale=300, sigma=0.5, min_size=30)
 
     def load_image(self, fname, shape):
         return np.array(load_image(fname).resize((shape[1], shape[0])))
