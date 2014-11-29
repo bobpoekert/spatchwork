@@ -1,6 +1,8 @@
 spatchwork
 ==========
 
+License: Public Domain
+
 _usage_:
 
 1. put the image file(s) in a drectory called targets/
