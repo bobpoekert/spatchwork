@@ -28,7 +28,7 @@ def get_mentions(poll_interval=60, direct_mentions_only=False, last_mention=None
         if direct_mentions_only:
             current_mentions = [t for t in current_mentions if \
                     re.split('[^@\w]', t.text)[0] == '@' + screen_name]
-        if current_mentions: 
+        if current_mentions:
             last_mention = current_mentions[0].id
             for mention in current_mentions:
                 if mention.user.screen_name in blacklist:

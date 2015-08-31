@@ -34,7 +34,7 @@ class Segmentation(object):
 
         print 'loading image'
         img = Image.open(fname)
-        img.thumbnail((800,600), Image.ANTIALIAS)
+        #img.thumbnail((800,600), Image.ANTIALIAS)
         self.raw_img = np.array(enhance(img).convert('RGB'))
         self._segment_ids = None
         img_float = img_as_float(self.raw_img)
