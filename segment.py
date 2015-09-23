@@ -34,12 +34,15 @@ class Segmentation(object):
 
         print 'loading image'
         img = Image.open(fname)
-        #img.thumbnail((800,600), Image.ANTIALIAS)
+        width, height = img.size
+        square_size = width * height
+        min_size = square_size / 300
+        img.thumbnail((1280,1024), Image.ANTIALIAS)
         self.raw_img = np.array(enhance(img).convert('RGB'))
         self._segment_ids = None
         img_float = img_as_float(self.raw_img)
         print 'segmenting image'
-        self.segments = felzenszwalb(img_float, scale=300, sigma=0.5, min_size=30)
+        self.segments = felzenszwalb(img_float, scale=300, sigma=1.0, min_size=min_size)
 
     def load_image(self, fname, shape):
         return np.array(load_image(fname).resize((shape[1], shape[0])))
@@ -119,6 +122,7 @@ def load_vectors(folder):
 
 def build_dataset(folder):
     names = glob('%s/*.jpeg' % folder)
+    names = random.sample(names, 10000)
     vectors = vectors_from_images(names)
     save_vectors(folder, names, vectors)
 
