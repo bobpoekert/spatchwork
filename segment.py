@@ -24,6 +24,15 @@ def norms(mat):
         norm_cache[id(mat)] = res
         return res
 
+def tile_image(tile, target_size):
+    res = Image.new('RGB', target_size)
+    target_width, target_height = target_size
+    tile_width, tile_height = tile.size
+    for left in range(0, target_width, tile_width):
+        for top in range(0, target_height, tile_height):
+            res.paste(tile, box=(left, top))
+    return res
+
 def load_image(fname):
     return Image.open(fname).convert('RGB')
 
@@ -34,18 +43,19 @@ class Segmentation(object):
 
         print 'loading image'
         img = Image.open(fname)
+        img.thumbnail((1280,1024), Image.ANTIALIAS)
         width, height = img.size
         square_size = width * height
         min_size = square_size / 300
-        img.thumbnail((1280,1024), Image.ANTIALIAS)
         self.raw_img = np.array(enhance(img).convert('RGB'))
         self._segment_ids = None
         img_float = img_as_float(self.raw_img)
         print 'segmenting image'
-        self.segments = felzenszwalb(img_float, scale=300, sigma=1.0, min_size=min_size)
+        self.segments = felzenszwalb(img_float, scale=300, sigma=0.25, min_size=min_size)
 
     def load_image(self, fname, shape):
-        return np.array(load_image(fname).resize((shape[1], shape[0])))
+        return np.array(tile_image(load_image(fname), (shape[1], shape[0])))
+        #return np.array(load_image(fname).resize((shape[1], shape[0])))
 
     def segment_mask(self, segment_id):
         mask = np.empty(self.segments.shape)
